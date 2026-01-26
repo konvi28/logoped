@@ -441,6 +441,16 @@
                 <button class="btn btn-danger" onclick="clearAll()">🗑️ Очистити все</button>
             </div>
 
+            <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #667eea;">
+                <strong>💡 Як користуватися:</strong>
+                <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
+                    <li>Перетягніть <strong>дитину</strong> з вкладки "Діти" в потрібну клітинку розкладу</li>
+                    <li>Перетягніть <strong>час</strong> з вкладки "Час занять" в ту саму клітинку</li>
+                    <li>Можна додавати окремо - спочатку дитину, потім час, або навпаки</li>
+                    <li>Можна додавати кілька занять в одну клітинку</li>
+                </ul>
+            </div>
+
             <div id="scheduleContent">
                 <table class="schedule-table" id="scheduleTable">
                     <thead>
@@ -471,8 +481,7 @@
         const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця'];
 
         // Змінні для drag and drop
-        let draggedChild = null;
-        let draggedTime = null;
+        let draggedItem = null; // Може бути дитина або час
 
         // Перемикання вкладок
         function switchTab(index) {
@@ -622,17 +631,28 @@
 
         // Drag and Drop
         function dragChildStart(event, childId) {
-            draggedChild = childId;
+            const child = children.find(c => c.id === childId);
+            draggedItem = {
+                type: 'child',
+                id: childId,
+                name: child.name
+            };
             event.target.classList.add('dragging');
         }
 
         function dragTimeStart(event, timeId) {
-            draggedTime = timeId;
+            const time = timeSlots.find(t => t.id === timeId);
+            draggedItem = {
+                type: 'time',
+                id: timeId,
+                display: time.display
+            };
             event.target.classList.add('dragging');
         }
 
         function dragEnd(event) {
             event.target.classList.remove('dragging');
+            draggedItem = null;
         }
 
         function allowDrop(event) {
@@ -648,10 +668,7 @@
             event.preventDefault();
             event.currentTarget.classList.remove('drag-over');
 
-            if (!draggedChild || !draggedTime) {
-                alert('⚠️ Потрібно перетягнути дитину та час разом. Спочатку виберіть дитину, потім час.');
-                draggedChild = null;
-                draggedTime = null;
+            if (!draggedItem) {
                 return;
             }
 
@@ -661,23 +678,43 @@
                 schedule[key] = [];
             }
 
-            const child = children.find(c => c.id === draggedChild);
-            const time = timeSlots.find(t => t.id === draggedTime);
+            // Додаємо дитину або час
+            if (draggedItem.type === 'child') {
+                // Додаємо дитину до розкладу
+                const lesson = {
+                    id: Date.now(),
+                    childId: draggedItem.id,
+                    childName: draggedItem.name,
+                    timeId: null,
+                    time: null,
+                    day: day,
+                    lessonNumber: lessonNumber
+                };
+                schedule[key].push(lesson);
+            } else if (draggedItem.type === 'time') {
+                // Шукаємо заняття без часу або створюємо нове
+                const lessonWithoutTime = schedule[key].find(l => !l.timeId);
+                
+                if (lessonWithoutTime) {
+                    // Додаємо час до існуючого заняття
+                    lessonWithoutTime.timeId = draggedItem.id;
+                    lessonWithoutTime.time = draggedItem.display;
+                } else {
+                    // Створюємо нове заняття тільки з часом
+                    const lesson = {
+                        id: Date.now(),
+                        childId: null,
+                        childName: null,
+                        timeId: draggedItem.id,
+                        time: draggedItem.display,
+                        day: day,
+                        lessonNumber: lessonNumber
+                    };
+                    schedule[key].push(lesson);
+                }
+            }
 
-            const lesson = {
-                id: Date.now(),
-                childId: draggedChild,
-                childName: child.name,
-                timeId: draggedTime,
-                time: time.display,
-                day: day,
-                lessonNumber: lessonNumber
-            };
-
-            schedule[key].push(lesson);
-
-            draggedChild = null;
-            draggedTime = null;
+            draggedItem = null;
 
             renderSchedule();
             updateStats();
@@ -727,8 +764,8 @@
                                 ${lessons.map(lesson => `
                                     <div class="lesson-block">
                                         <button class="remove-lesson" onclick="removeLesson('${day}', ${i + 1}, ${lesson.id})">×</button>
-                                        <div class="lesson-child">${lesson.childName}</div>
-                                        <div class="lesson-time">${lesson.time}</div>
+                                        ${lesson.childName ? `<div class="lesson-child">${lesson.childName}</div>` : '<div class="lesson-child" style="color: #999;">Дитина не вказана</div>'}
+                                        ${lesson.time ? `<div class="lesson-time">${lesson.time}</div>` : '<div class="lesson-time" style="color: #999;">Час не вказано</div>'}
                                     </div>
                                 `).join('')}
                             </td>
