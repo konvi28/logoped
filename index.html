@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Розклад логопеда v 1.4</title>
+    <title>Розклад логопеда v 1.5</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -357,6 +357,15 @@
         .schedule-table tbody td.drag-over {
             background-color: #d4edda !important;
             border-color: #28a745 !important;
+        }
+
+        /* Жирна лінія між днями */
+        .schedule-table tbody tr.last-lesson-of-day {
+            border-bottom: 4px solid #495057;
+        }
+
+        .schedule-table tbody tr.last-lesson-of-day td {
+            border-bottom: 4px solid #495057 !important;
         }
 
         /* Картка заняття */
@@ -856,7 +865,8 @@
 
             days.forEach((day, dayIndex) => {
                 for (let i = 0; i < maxLessons; i++) {
-                    scheduleHtml += '<tr>';
+                    const isLastLesson = (i === maxLessons - 1);
+                    scheduleHtml += `<tr${isLastLesson ? ' class="last-lesson-of-day"' : ''}>`;
                     
                     if (i === 0) {
                         scheduleHtml += `<td rowspan="${maxLessons}" class="day-column">${day}</td>`;
