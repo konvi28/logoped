@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Розклад логопеда v 1.3</title>
+    <title>Розклад логопеда v 1.4</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -1391,17 +1391,106 @@
                 return;
             }
 
-            const element = document.querySelector('.schedule-wrapper');
+            // Створюємо тимчасовий контейнер для PDF
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.padding = '20px';
+            pdfContainer.style.fontFamily = 'Arial, sans-serif';
+
+            days.forEach((day, dayIndex) => {
+                // Додаємо розрив сторінки перед кожним днем (крім першого)
+                if (dayIndex > 0) {
+                    const pageBreak = document.createElement('div');
+                    pageBreak.style.pageBreakBefore = 'always';
+                    pdfContainer.appendChild(pageBreak);
+                }
+
+                // Заголовок дня
+                const dayTitle = document.createElement('h2');
+                dayTitle.textContent = day;
+                dayTitle.style.textAlign = 'center';
+                dayTitle.style.marginBottom = '20px';
+                dayTitle.style.color = '#667eea';
+                pdfContainer.appendChild(dayTitle);
+
+                // Створюємо таблицю для дня
+                const table = document.createElement('table');
+                table.style.width = '100%';
+                table.style.borderCollapse = 'collapse';
+                table.style.marginBottom = '20px';
+
+                // Заголовок таблиці
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr style="background: #667eea; color: white;">
+                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 50px;">№</th>
+                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center; width: 150px;">Час</th>
+                        <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Дитина</th>
+                    </tr>
+                `;
+                table.appendChild(thead);
+
+                // Тіло таблиці
+                const tbody = document.createElement('tbody');
+
+                for (let i = 0; i < maxLessons; i++) {
+                    const timeKey = `time-${dayIndex}-${i}`;
+                    const childKey = `child-${dayIndex}-${i}`;
+                    
+                    const timeSlot = schedule[timeKey];
+                    const childrenInSlot = schedule[childKey] || [];
+
+                    const tr = document.createElement('tr');
+                    
+                    // Номер уроку
+                    const tdNum = document.createElement('td');
+                    tdNum.style.border = '1px solid #ddd';
+                    tdNum.style.padding = '10px';
+                    tdNum.style.textAlign = 'center';
+                    tdNum.style.fontWeight = 'bold';
+                    tdNum.textContent = i + 1;
+                    tr.appendChild(tdNum);
+
+                    // Час
+                    const tdTime = document.createElement('td');
+                    tdTime.style.border = '1px solid #ddd';
+                    tdTime.style.padding = '10px';
+                    tdTime.style.textAlign = 'center';
+                    tdTime.textContent = timeSlot ? timeSlot.display : '-';
+                    tr.appendChild(tdTime);
+
+                    // Діти
+                    const tdChildren = document.createElement('td');
+                    tdChildren.style.border = '1px solid #ddd';
+                    tdChildren.style.padding = '10px';
+                    
+                    if (childrenInSlot.length > 0) {
+                        const childNames = childrenInSlot.map(c => c.childName).join(', ');
+                        tdChildren.textContent = childNames;
+                    } else {
+                        tdChildren.textContent = '';
+                    }
+                    
+                    tr.appendChild(tdChildren);
+                    tbody.appendChild(tr);
+                }
+
+                table.appendChild(tbody);
+                pdfContainer.appendChild(table);
+            });
+
+            // Налаштування PDF
             const opt = {
                 margin: 10,
                 filename: 'Rozklad_Logoped.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             };
 
-            html2pdf().set(opt).from(element).save();
-            alert('✅ Розклад експортовано в PDF!');
+            html2pdf().set(opt).from(pdfContainer).save().then(() => {
+                alert('✅ Розклад експортовано в PDF!');
+            });
         }
 
         // Ініціалізація
