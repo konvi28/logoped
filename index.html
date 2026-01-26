@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Розклад логопеда v 1.1</title>
+    <title>Розклад логопеда v 1.2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -326,14 +326,20 @@
             background: #f8f9fa;
             font-size: 14px;
             color: #6c757d;
-        }
-
-        .schedule-table tbody td:not(.day-column):not(.lesson-number):not(.time-column) {
             cursor: pointer;
             transition: background-color 0.3s;
         }
 
-        .schedule-table tbody td:not(.day-column):not(.lesson-number):not(.time-column):hover {
+        .schedule-table td.time-column:hover {
+            background-color: #e9ecef;
+        }
+
+        .schedule-table tbody td:not(.day-column):not(.lesson-number) {
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .schedule-table tbody td:not(.day-column):not(.lesson-number):hover {
             background-color: #f8f9fa;
         }
 
@@ -361,6 +367,15 @@
 
         .lesson-card.dragging {
             opacity: 0.5;
+        }
+
+        .lesson-card.time-card {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .lesson-card.time-card:hover {
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
         }
 
         .lesson-card-child {
@@ -590,11 +605,13 @@
             if (confirm('Видалити цю дитину? Всі заняття з нею будуть видалені з розкладу.')) {
                 children = children.filter(c => c.id !== id);
                 
-                // Видаляємо заняття з розкладу
+                // Видаляємо заняття з розкладу (нова структура)
                 Object.keys(schedule).forEach(key => {
-                    schedule[key] = schedule[key].filter(lesson => lesson.childId !== id);
-                    if (schedule[key].length === 0) {
-                        delete schedule[key];
+                    if (key.startsWith('child-')) {
+                        schedule[key] = schedule[key].filter(child => child.childId !== id);
+                        if (schedule[key].length === 0) {
+                            delete schedule[key];
+                        }
                     }
                 });
                 
@@ -655,17 +672,16 @@
 
         // Видалення часового блоку
         function removeTimeSlot(id) {
-            if (confirm('Видалити цей часовий блок? Всі заняття з цим часом будуть оновлені.')) {
+            if (confirm('Видалити цей часовий блок? Всі слоти з цим часом будуть очищені.')) {
                 timeSlots = timeSlots.filter(t => t.id !== id);
                 
-                // Оновлюємо заняття в розкладі - видаляємо час
+                // Видаляємо з розкладу (нова структура)
                 Object.keys(schedule).forEach(key => {
-                    schedule[key] = schedule[key].map(lesson => {
-                        if (lesson.timeId === id) {
-                            return { ...lesson, timeId: null, time: null };
+                    if (key.startsWith('time-')) {
+                        if (schedule[key] && schedule[key].timeId === id) {
+                            delete schedule[key];
                         }
-                        return lesson;
-                    });
+                    }
                 });
                 
                 renderTimeSlots();
@@ -716,8 +732,10 @@
             let hasAvailableChildren = false;
             children.forEach(child => {
                 let usedCount = 0;
-                Object.values(schedule).forEach(lessons => {
-                    usedCount += lessons.filter(l => l.childId === child.id).length;
+                Object.keys(schedule).forEach(key => {
+                    if (key.startsWith('child-')) {
+                        usedCount += schedule[key].filter(c => c.childId === child.id).length;
+                    }
                 });
                 
                 if (usedCount < child.hours) {
@@ -730,8 +748,10 @@
                 
                 children.forEach(child => {
                     let usedCount = 0;
-                    Object.values(schedule).forEach(lessons => {
-                        usedCount += lessons.filter(l => l.childId === child.id).length;
+                    Object.keys(schedule).forEach(key => {
+                        if (key.startsWith('child-')) {
+                            usedCount += schedule[key].filter(c => c.childId === child.id).length;
+                        }
                     });
                     
                     const availableCount = child.hours - usedCount;
@@ -777,7 +797,7 @@
 
             // Генеруємо таблицю розкладу
             let scheduleHtml = '<div class="schedule-wrapper"><table class="schedule-table"><thead><tr>';
-            scheduleHtml += '<th>День</th><th>№</th><th>Час</th><th>Заняття</th>';
+            scheduleHtml += '<th>День</th><th>№</th><th>Час</th><th>Дитина</th>';
             scheduleHtml += '</tr></thead><tbody>';
 
             days.forEach((day, dayIndex) => {
@@ -790,33 +810,44 @@
                     
                     scheduleHtml += `<td class="lesson-number">${i + 1}</td>`;
                     
-                    // Час - показуємо час з перших занять у цьому слоті
-                    const key = `${dayIndex}-${i}`;
-                    const lessons = schedule[key] || [];
-                    let timeDisplay = '-';
-                    if (lessons.length > 0 && lessons[0].time) {
-                        timeDisplay = lessons[0].time;
+                    // Колонка для часу - drop-zone
+                    const timeKey = `time-${dayIndex}-${i}`;
+                    const timeSlot = schedule[timeKey] || null;
+                    
+                    scheduleHtml += `<td class="time-column" data-day="${dayIndex}" data-lesson="${i}" data-type="time">`;
+                    if (timeSlot) {
+                        scheduleHtml += `
+                            <div class="lesson-card time-card" 
+                                 draggable="true"
+                                 data-from-schedule="true"
+                                 data-type="time-slot"
+                                 data-day="${dayIndex}"
+                                 data-lesson="${i}">
+                                <button class="delete-lesson-btn" onclick="deleteTime(${dayIndex}, ${i}); event.stopPropagation();">×</button>
+                                <div style="font-weight: 600; color: #28a745;">${timeSlot.display}</div>
+                            </div>
+                        `;
                     }
-                    scheduleHtml += `<td class="time-column">${timeDisplay}</td>`;
+                    scheduleHtml += `</td>`;
                     
-                    scheduleHtml += `<td data-day="${dayIndex}" data-lesson="${i}">`;
+                    // Колонка для дітей - drop-zone
+                    const childKey = `child-${dayIndex}-${i}`;
+                    const children = schedule[childKey] || [];
                     
-                    if (lessons.length > 0) {
-                        lessons.forEach(lesson => {
-                            const hasChild = lesson.childName;
-                            const hasTime = lesson.time;
-                            const isComplete = hasChild && hasTime;
-                            
+                    scheduleHtml += `<td data-day="${dayIndex}" data-lesson="${i}" data-type="child">`;
+                    
+                    if (children.length > 0) {
+                        children.forEach(child => {
                             scheduleHtml += `
-                                <div class="lesson-card ${!isComplete ? 'lesson-card-incomplete' : ''}" 
+                                <div class="lesson-card" 
                                      draggable="true"
                                      data-from-schedule="true"
+                                     data-type="child-slot"
                                      data-day="${dayIndex}"
                                      data-lesson="${i}"
-                                     data-lesson-id="${lesson.id}">
-                                    <button class="delete-lesson-btn" onclick="deleteLesson(${dayIndex}, ${i}, ${lesson.id}); event.stopPropagation();">×</button>
-                                    <div class="lesson-card-child">${hasChild ? lesson.childName : '❓ Хто?'}</div>
-                                    <div class="lesson-card-time">${hasTime ? lesson.time : '⏰ Коли?'}</div>
+                                     data-child-id="${child.id}">
+                                    <button class="delete-lesson-btn" onclick="deleteChild(${dayIndex}, ${i}, ${child.id}); event.stopPropagation();">×</button>
+                                    <div class="lesson-card-child">${child.childName}</div>
                                 </div>
                             `;
                         });
@@ -851,8 +882,8 @@
                 card.addEventListener('dragend', handleDragEnd);
             });
 
-            // Клітинки таблиці
-            const cells = document.querySelectorAll('.schedule-table tbody td:not(.day-column):not(.lesson-number):not(.time-column)');
+            // Клітинки таблиці (і час, і діти)
+            const cells = document.querySelectorAll('.schedule-table tbody td:not(.day-column):not(.lesson-number)');
             cells.forEach(cell => {
                 cell.addEventListener('dragover', handleCellDragOver);
                 cell.addEventListener('dragleave', handleCellDragLeave);
@@ -910,55 +941,66 @@
             
             const day = parseInt(e.currentTarget.dataset.day);
             const lesson = parseInt(e.currentTarget.dataset.lesson);
-            const key = `${day}-${lesson}`;
-
-            if (!schedule[key]) {
-                schedule[key] = [];
-            }
+            const cellType = e.currentTarget.dataset.type; // 'time' або 'child'
 
             // Якщо переміщуємо з розкладу
             if (fromSchedule && originalSlot) {
-                const oldKey = `${originalSlot.day}-${originalSlot.lesson}`;
-                const oldLesson = schedule[oldKey].find(l => l.id === originalSlot.lessonId);
+                const oldTimeKey = `time-${originalSlot.day}-${originalSlot.lesson}`;
+                const oldChildKey = `child-${originalSlot.day}-${originalSlot.lesson}`;
                 
-                if (oldLesson) {
-                    // Видаляємо зі старого місця
-                    schedule[oldKey] = schedule[oldKey].filter(l => l.id !== originalSlot.lessonId);
-                    if (schedule[oldKey].length === 0) {
-                        delete schedule[oldKey];
+                if (draggedElement.dataset.type === 'time-slot') {
+                    // Переміщуємо час
+                    const timeSlot = schedule[oldTimeKey];
+                    if (timeSlot) {
+                        delete schedule[oldTimeKey];
+                        const newTimeKey = `time-${day}-${lesson}`;
+                        schedule[newTimeKey] = timeSlot;
                     }
-                    
-                    // Додаємо на нове місце
-                    schedule[key].push(oldLesson);
+                } else if (draggedElement.dataset.type === 'child-slot') {
+                    // Переміщуємо дитину
+                    const childId = parseInt(draggedElement.dataset.childId);
+                    if (schedule[oldChildKey]) {
+                        const childData = schedule[oldChildKey].find(c => c.id === childId);
+                        if (childData) {
+                            schedule[oldChildKey] = schedule[oldChildKey].filter(c => c.id !== childId);
+                            if (schedule[oldChildKey].length === 0) {
+                                delete schedule[oldChildKey];
+                            }
+                            
+                            const newChildKey = `child-${day}-${lesson}`;
+                            if (!schedule[newChildKey]) {
+                                schedule[newChildKey] = [];
+                            }
+                            schedule[newChildKey].push(childData);
+                        }
+                    }
                 }
             } else if (draggedType === 'child') {
-                // Додаємо нову дитину
-                const child = children.find(c => c.id === draggedId);
-                const lesson = {
-                    id: Date.now(),
-                    childId: child.id,
-                    childName: child.name,
-                    timeId: null,
-                    time: null
-                };
-                schedule[key].push(lesson);
-            } else if (draggedType === 'time') {
-                // Додаємо час до першого неповного заняття або створюємо нове
-                const time = timeSlots.find(t => t.id === draggedId);
-                const incompleteLesson = schedule[key].find(l => !l.timeId);
-                
-                if (incompleteLesson) {
-                    incompleteLesson.timeId = time.id;
-                    incompleteLesson.time = time.display;
-                } else {
-                    const lesson = {
+                // Додаємо нову дитину (тільки в колонку дітей)
+                if (cellType === 'child') {
+                    const child = children.find(c => c.id === draggedId);
+                    const childKey = `child-${day}-${lesson}`;
+                    
+                    if (!schedule[childKey]) {
+                        schedule[childKey] = [];
+                    }
+                    
+                    schedule[childKey].push({
                         id: Date.now(),
-                        childId: null,
-                        childName: null,
+                        childId: child.id,
+                        childName: child.name
+                    });
+                }
+            } else if (draggedType === 'time') {
+                // Додаємо час (тільки в колонку часу)
+                if (cellType === 'time') {
+                    const time = timeSlots.find(t => t.id === draggedId);
+                    const timeKey = `time-${day}-${lesson}`;
+                    
+                    schedule[timeKey] = {
                         timeId: time.id,
-                        time: time.display
+                        display: time.display
                     };
-                    schedule[key].push(lesson);
                 }
             }
 
@@ -972,7 +1014,28 @@
             saveToLocalStorage();
         }
 
-        // Видалення заняття
+        // Видалення часу
+        function deleteTime(day, lesson) {
+            const timeKey = `time-${day}-${lesson}`;
+            delete schedule[timeKey];
+            renderSchedule();
+            saveToLocalStorage();
+        }
+
+        // Видалення дитини
+        function deleteChild(day, lesson, childId) {
+            const childKey = `child-${day}-${lesson}`;
+            if (schedule[childKey]) {
+                schedule[childKey] = schedule[childKey].filter(c => c.id !== childId);
+                if (schedule[childKey].length === 0) {
+                    delete schedule[childKey];
+                }
+            }
+            renderSchedule();
+            saveToLocalStorage();
+        }
+
+        // Видалення заняття (стара функція - вже не використовується)
         function deleteLesson(day, lesson, lessonId) {
             const key = `${day}-${lesson}`;
             schedule[key] = schedule[key].filter(l => l.id !== lessonId);
@@ -998,12 +1061,16 @@
                 };
             });
 
-            Object.values(schedule).forEach(lessons => {
-                lessons.forEach(lesson => {
-                    if (lesson.childId && childStats[lesson.childId]) {
-                        childStats[lesson.childId].actual++;
-                    }
-                });
+            // Рахуємо з нової структури
+            Object.keys(schedule).forEach(key => {
+                if (key.startsWith('child-')) {
+                    const childrenInSlot = schedule[key];
+                    childrenInSlot.forEach(child => {
+                        if (child.childId && childStats[child.childId]) {
+                            childStats[child.childId].actual++;
+                        }
+                    });
+                }
             });
 
             let html = '';
@@ -1083,23 +1150,28 @@
             const data = [];
 
             // Заголовок
-            data.push(['День', '№', 'Дитина', 'Час']);
+            data.push(['День', '№', 'Час', 'Дитина']);
 
             // Дані
             days.forEach((day, dayIndex) => {
                 for (let i = 0; i < maxLessons; i++) {
-                    const key = `${dayIndex}-${i}`;
-                    const lessons = schedule[key] || [];
+                    const timeKey = `time-${dayIndex}-${i}`;
+                    const childKey = `child-${dayIndex}-${i}`;
                     
-                    if (lessons.length === 0) {
-                        data.push([day, i + 1, '', '']);
+                    const timeSlot = schedule[timeKey];
+                    const childrenInSlot = schedule[childKey] || [];
+                    
+                    const timeDisplay = timeSlot ? timeSlot.display : '';
+                    
+                    if (childrenInSlot.length === 0) {
+                        data.push([day, i + 1, timeDisplay, '']);
                     } else {
-                        lessons.forEach((lesson, idx) => {
+                        childrenInSlot.forEach((child, idx) => {
                             data.push([
                                 idx === 0 ? day : '',
                                 idx === 0 ? i + 1 : '',
-                                lesson.childName || '',
-                                lesson.time || ''
+                                idx === 0 ? timeDisplay : '',
+                                child.childName || ''
                             ]);
                         });
                     }
@@ -1107,13 +1179,18 @@
             });
 
             const ws = XLSX.utils.aoa_to_sheet(data);
-            ws['!cols'] = [{ wch: 12 }, { wch: 5 }, { wch: 30 }, { wch: 15 }];
+            ws['!cols'] = [{ wch: 12 }, { wch: 5 }, { wch: 15 }, { wch: 30 }];
             XLSX.utils.book_append_sheet(wb, ws, 'Розклад');
 
             // Статистика
             const statsData = [['Дитина', 'Заплановано годин', 'Фактично годин', 'Різниця']];
             children.forEach(child => {
-                const actual = Object.values(schedule).flat().filter(l => l.childId === child.id).length;
+                let actual = 0;
+                Object.keys(schedule).forEach(key => {
+                    if (key.startsWith('child-')) {
+                        actual += schedule[key].filter(c => c.childId === child.id).length;
+                    }
+                });
                 statsData.push([child.name, child.hours, actual, actual - child.hours]);
             });
 
