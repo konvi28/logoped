@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Розклад логопеда v 1.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            height: 100vh;
+            margin: 0;
+            background: white;
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 0.9em;
+            margin: 0;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            flex-shrink: 0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 15px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s;
+            border: none;
+            background: none;
+            font-size: 14px;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
+            color: #667eea;
+            background: white;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 0 20px 20px 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+            padding: 8px 15px;
+            font-size: 13px;
+            margin-right: 5px;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+            padding: 8px 15px;
+            font-size: 13px;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+        }
+
+        .save-load-section {
+            margin-bottom: 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 0;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .children-list, .time-slots-list {
+            margin-top: 20px;
+        }
+
+        .child-item, .time-slot-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            transition: all 0.3s;
+        }
+
+        .child-item:hover, .time-slot-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .child-item.dragging, .time-slot-item.dragging {
+            opacity: 0.5;
+        }
+
+        .child-info, .time-info {
+            flex: 1;
+        }
+
+        .child-name, .time-value {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .child-hours {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+        }
+
+        .schedule-table th,
+        .schedule-table td {
+            border: 2px solid #dee2e6;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .schedule-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .schedule-table td {
+            min-height: 80px;
+            vertical-align: top;
+            position: relative;
+        }
+
+        .schedule-table td.drop-zone {
+            background: #f0f0f0;
+            min-width: 150px;
+        }
+
+        .schedule-table td.drop-zone.drag-over {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .lesson-block {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 8px;
+            margin: 4px 0;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .lesson-block:hover {
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .lesson-child {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .lesson-time {
+            color: #667eea;
+            font-size: 12px;
+        }
+
+        .remove-lesson {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .lesson-block:hover .remove-lesson {
+            opacity: 1;
+        }
+
+        .remove-lesson:hover {
+            background: #c82333;
+        }
+
+        .day-column {
+            background: #e9ecef;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .lesson-number {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .time-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .time-input-group input {
+            flex: 1;
+        }
+
+        h2 {
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+
+        .stats {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .stats h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-item {
+            margin: 8px 0;
+            color: #495057;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Розклад логопеда</h1>
+            <p>Система планування занять з дітьми</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab(0)">👶 Діти</button>
+            <button class="tab" onclick="switchTab(1)">⏰ Час занять</button>
+            <button class="tab" onclick="switchTab(2)">📅 Розклад</button>
+        </div>
+
+        <!-- Вкладка: Діти -->
+        <div class="tab-content active">
+            <h2>Додати дитину</h2>
+            <div class="form-group">
+                <label>Ім'я та прізвище дитини:</label>
+                <input type="text" id="childName" placeholder="Наприклад: Іванов Петро">
+            </div>
+            <div class="form-group">
+                <label>Кількість годин на тиждень:</label>
+                <input type="number" id="childHours" min="1" max="20" value="2" placeholder="2">
+            </div>
+            <button class="btn btn-primary" onclick="addChild()">➕ Додати дитину</button>
+
+            <div class="children-list">
+                <h2>Список дітей</h2>
+                <div id="childrenContainer"></div>
+            </div>
+        </div>
+
+        <!-- Вкладка: Час занять -->
+        <div class="tab-content">
+            <h2>Додати часовий блок</h2>
+            <div class="time-input-group">
+                <div class="form-group" style="margin: 0;">
+                    <label>Початок:</label>
+                    <input type="time" id="timeStart" value="08:00">
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label>Кінець:</label>
+                    <input type="time" id="timeEnd" value="08:45">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="addTimeSlot()">➕ Додати час</button>
+
+            <div class="time-slots-list">
+                <h2>Часові блоки</h2>
+                <div id="timeSlotsContainer"></div>
+            </div>
+        </div>
+
+        <!-- Вкладка: Розклад -->
+        <div class="tab-content">
+            <div class="save-load-section">
+                <h3 style="width: 100%; margin: 5px 0;">💾 Керування даними</h3>
+                <button class="btn btn-success" onclick="saveData()">💾 Зберегти</button>
+                <button class="btn btn-info" onclick="exportToExcel()">📥 Excel</button>
+                <button class="btn btn-info" onclick="exportToPDF()">📄 PDF</button>
+                <button class="btn btn-danger" onclick="clearAll()">🗑️ Очистити все</button>
+            </div>
+
+            <div id="scheduleContent">
+                <table class="schedule-table" id="scheduleTable">
+                    <thead>
+                        <tr>
+                            <th>День</th>
+                            <th>№</th>
+                            <th>Час</th>
+                            <th>Дитина</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="stats" id="statsSection">
+                <h3>📊 Статистика</h3>
+                <div id="statsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Дані
+        let children = [];
+        let timeSlots = [];
+        let schedule = {};
+        const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця'];
+
+        // Змінні для drag and drop
+        let draggedChild = null;
+        let draggedTime = null;
+
+        // Перемикання вкладок
+        function switchTab(index) {
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+            
+            contents.forEach((content, i) => {
+                content.classList.toggle('active', i === index);
+            });
+        }
+
+        // Додавання дитини
+        function addChild() {
+            const name = document.getElementById('childName').value.trim();
+            const hours = parseInt(document.getElementById('childHours').value) || 2;
+
+            if (!name) {
+                alert('⚠️ Будь ласка, введіть ім\'я дитини');
+                return;
+            }
+
+            const child = {
+                id: Date.now(),
+                name: name,
+                hours: hours
+            };
+
+            children.push(child);
+            document.getElementById('childName').value = '';
+            document.getElementById('childHours').value = '2';
+            
+            renderChildren();
+            updateStats();
+            saveToLocalStorage();
+        }
+
+        // Видалення дитини
+        function removeChild(id) {
+            if (confirm('Видалити цю дитину? Всі заняття з нею будуть видалені з розкладу.')) {
+                children = children.filter(c => c.id !== id);
+                
+                // Видаляємо заняття з розкладу
+                Object.keys(schedule).forEach(key => {
+                    schedule[key] = schedule[key].filter(lesson => lesson.childId !== id);
+                });
+                
+                renderChildren();
+                renderSchedule();
+                updateStats();
+                saveToLocalStorage();
+            }
+        }
+
+        // Відображення дітей
+        function renderChildren() {
+            const container = document.getElementById('childrenContainer');
+            
+            if (children.length === 0) {
+                container.innerHTML = '<p style="color: #6c757d; padding: 20px; text-align: center;">Поки що немає доданих дітей</p>';
+                return;
+            }
+
+            container.innerHTML = children.map(child => `
+                <div class="child-item" draggable="true" 
+                     ondragstart="dragChildStart(event, ${child.id})"
+                     ondragend="dragEnd(event)">
+                    <div class="child-info">
+                        <div class="child-name">${child.name}</div>
+                        <div class="child-hours">Годин на тиждень: ${child.hours}</div>
+                    </div>
+                    <button class="btn btn-danger" onclick="removeChild(${child.id})">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        // Додавання часового блоку
+        function addTimeSlot() {
+            const start = document.getElementById('timeStart').value;
+            const end = document.getElementById('timeEnd').value;
+
+            if (!start || !end) {
+                alert('⚠️ Будь ласка, введіть час початку та кінця заняття');
+                return;
+            }
+
+            if (start >= end) {
+                alert('⚠️ Час початку повинен бути раніше часу кінця');
+                return;
+            }
+
+            const timeSlot = {
+                id: Date.now(),
+                start: start,
+                end: end,
+                display: `${start} - ${end}`
+            };
+
+            timeSlots.push(timeSlot);
+            timeSlots.sort((a, b) => a.start.localeCompare(b.start));
+            
+            renderTimeSlots();
+            renderSchedule();
+            saveToLocalStorage();
+        }
+
+        // Видалення часового блоку
+        function removeTimeSlot(id) {
+            if (confirm('Видалити цей часовий блок? Всі заняття в цей час будуть видалені з розкладу.')) {
+                timeSlots = timeSlots.filter(t => t.id !== id);
+                
+                // Видаляємо заняття з розкладу
+                Object.keys(schedule).forEach(key => {
+                    schedule[key] = schedule[key].filter(lesson => lesson.timeId !== id);
+                });
+                
+                renderTimeSlots();
+                renderSchedule();
+                updateStats();
+                saveToLocalStorage();
+            }
+        }
+
+        // Відображення часових блоків
+        function renderTimeSlots() {
+            const container = document.getElementById('timeSlotsContainer');
+            
+            if (timeSlots.length === 0) {
+                container.innerHTML = '<p style="color: #6c757d; padding: 20px; text-align: center;">Поки що немає доданих часових блоків</p>';
+                return;
+            }
+
+            container.innerHTML = timeSlots.map(slot => `
+                <div class="time-slot-item" draggable="true"
+                     ondragstart="dragTimeStart(event, ${slot.id})"
+                     ondragend="dragEnd(event)">
+                    <div class="time-info">
+                        <div class="time-value">${slot.display}</div>
+                    </div>
+                    <button class="btn btn-danger" onclick="removeTimeSlot(${slot.id})">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        // Drag and Drop
+        function dragChildStart(event, childId) {
+            draggedChild = childId;
+            event.target.classList.add('dragging');
+        }
+
+        function dragTimeStart(event, timeId) {
+            draggedTime = timeId;
+            event.target.classList.add('dragging');
+        }
+
+        function dragEnd(event) {
+            event.target.classList.remove('dragging');
+        }
+
+        function allowDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+        }
+
+        function dragLeave(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
+        function drop(event, day, lessonNumber) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+
+            if (!draggedChild || !draggedTime) {
+                alert('⚠️ Потрібно перетягнути дитину та час разом. Спочатку виберіть дитину, потім час.');
+                draggedChild = null;
+                draggedTime = null;
+                return;
+            }
+
+            const key = `${day}-${lessonNumber}`;
+            
+            if (!schedule[key]) {
+                schedule[key] = [];
+            }
+
+            const child = children.find(c => c.id === draggedChild);
+            const time = timeSlots.find(t => t.id === draggedTime);
+
+            const lesson = {
+                id: Date.now(),
+                childId: draggedChild,
+                childName: child.name,
+                timeId: draggedTime,
+                time: time.display,
+                day: day,
+                lessonNumber: lessonNumber
+            };
+
+            schedule[key].push(lesson);
+
+            draggedChild = null;
+            draggedTime = null;
+
+            renderSchedule();
+            updateStats();
+            saveToLocalStorage();
+        }
+
+        // Видалення заняття з розкладу
+        function removeLesson(day, lessonNumber, lessonId) {
+            const key = `${day}-${lessonNumber}`;
+            schedule[key] = schedule[key].filter(l => l.id !== lessonId);
+            
+            if (schedule[key].length === 0) {
+                delete schedule[key];
+            }
+
+            renderSchedule();
+            updateStats();
+            saveToLocalStorage();
+        }
+
+        // Відображення розкладу
+        function renderSchedule() {
+            const tbody = document.getElementById('scheduleBody');
+            
+            // Завжди показуємо 12 уроків
+            const maxLessons = 12;
+
+            let html = '';
+            
+            days.forEach(day => {
+                for (let i = 0; i < maxLessons; i++) {
+                    const key = `${day}-${i + 1}`;
+                    const lessons = schedule[key] || [];
+                    
+                    // Знаходимо відповідний часовий слот, якщо є
+                    const slot = timeSlots[i];
+
+                    html += `
+                        <tr>
+                            ${i === 0 ? `<td rowspan="${maxLessons}" class="day-column">${day}</td>` : ''}
+                            <td class="lesson-number">${i + 1}</td>
+                            <td>${slot ? slot.display : '-'}</td>
+                            <td class="drop-zone" 
+                                ondrop="drop(event, '${day}', ${i + 1})"
+                                ondragover="allowDrop(event)"
+                                ondragleave="dragLeave(event)">
+                                ${lessons.map(lesson => `
+                                    <div class="lesson-block">
+                                        <button class="remove-lesson" onclick="removeLesson('${day}', ${i + 1}, ${lesson.id})">×</button>
+                                        <div class="lesson-child">${lesson.childName}</div>
+                                        <div class="lesson-time">${lesson.time}</div>
+                                    </div>
+                                `).join('')}
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // Оновлення статистики
+        function updateStats() {
+            const statsContent = document.getElementById('statsContent');
+            
+            // Підрахунок занять для кожної дитини
+            const childStats = {};
+            children.forEach(child => {
+                childStats[child.id] = {
+                    name: child.name,
+                    planned: child.hours,
+                    actual: 0
+                };
+            });
+
+            Object.values(schedule).forEach(lessons => {
+                lessons.forEach(lesson => {
+                    if (childStats[lesson.childId]) {
+                        childStats[lesson.childId].actual++;
+                    }
+                });
+            });
+
+            let html = '';
+            Object.values(childStats).forEach(stat => {
+                const diff = stat.actual - stat.planned;
+                const color = diff === 0 ? '#28a745' : (diff < 0 ? '#dc3545' : '#ffc107');
+                
+                html += `
+                    <div class="stat-item">
+                        <strong>${stat.name}:</strong> 
+                        ${stat.actual} / ${stat.planned} годин
+                        <span style="color: ${color}; font-weight: 600;">
+                            ${diff > 0 ? '+' : ''}${diff !== 0 ? diff : '✓'}
+                        </span>
+                    </div>
+                `;
+            });
+
+            if (html === '') {
+                html = '<p style="color: #6c757d;">Немає даних для відображення</p>';
+            }
+
+            statsContent.innerHTML = html;
+        }
+
+        // Збереження в localStorage
+        function saveToLocalStorage() {
+            const data = {
+                children: children,
+                timeSlots: timeSlots,
+                schedule: schedule
+            };
+            localStorage.setItem('logopedSchedule', JSON.stringify(data));
+        }
+
+        // Завантаження з localStorage
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('logopedSchedule');
+            if (saved) {
+                const data = JSON.parse(saved);
+                children = data.children || [];
+                timeSlots = data.timeSlots || [];
+                schedule = data.schedule || {};
+            }
+        }
+
+        // Збереження даних
+        function saveData() {
+            saveToLocalStorage();
+            alert('✅ Дані успішно збережено!');
+        }
+
+        // Очищення всіх даних
+        function clearAll() {
+            if (confirm('⚠️ Видалити ВСІ дані? Цю дію неможливо скасувати!')) {
+                children = [];
+                timeSlots = [];
+                schedule = {};
+                localStorage.removeItem('logopedSchedule');
+                
+                renderChildren();
+                renderTimeSlots();
+                renderSchedule();
+                updateStats();
+                
+                alert('✅ Всі дані видалено!');
+            }
+        }
+
+        // Експорт в Excel
+        function exportToExcel() {
+            if (typeof XLSX === 'undefined') {
+                alert('⏳ Завантаження бібліотеки Excel... Спробуйте ще раз через секунду.');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const data = [];
+
+            // Заголовок
+            const header = ['День', '№', 'Час', 'Дитина'];
+            data.push(header);
+
+            // Заповнення даних - 12 уроків
+            const maxLessons = 12;
+            days.forEach(day => {
+                for (let i = 0; i < maxLessons; i++) {
+                    const key = `${day}-${i + 1}`;
+                    const lessons = schedule[key] || [];
+                    const slot = timeSlots[i];
+                    
+                    if (lessons.length === 0) {
+                        data.push([day, i + 1, slot ? slot.display : '-', '']);
+                    } else {
+                        lessons.forEach((lesson, j) => {
+                            data.push([
+                                j === 0 ? day : '',
+                                j === 0 ? i + 1 : '',
+                                j === 0 ? (slot ? slot.display : '-') : '',
+                                lesson.childName
+                            ]);
+                        });
+                    }
+                }
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            ws['!cols'] = [{ wch: 12 }, { wch: 5 }, { wch: 15 }, { wch: 30 }];
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Розклад');
+
+            // Додаємо аркуш зі статистикою
+            const statsData = [['Дитина', 'Заплановано годин', 'Фактично годин', 'Різниця']];
+            children.forEach(child => {
+                const actual = Object.values(schedule).flat().filter(l => l.childId === child.id).length;
+                statsData.push([child.name, child.hours, actual, actual - child.hours]);
+            });
+
+            const wsStats = XLSX.utils.aoa_to_sheet(statsData);
+            wsStats['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 15 }];
+            XLSX.utils.book_append_sheet(wb, wsStats, 'Статистика');
+
+            XLSX.writeFile(wb, 'Rozklad_Logoped.xlsx');
+            alert('✅ Розклад експортовано в Excel!');
+        }
+
+        // Експорт в PDF
+        function exportToPDF() {
+            if (typeof html2pdf === 'undefined') {
+                alert('⏳ Завантаження бібліотеки PDF... Спробуйте ще раз через секунду.');
+                return;
+            }
+
+            const element = document.getElementById('scheduleContent');
+            const opt = {
+                margin: 10,
+                filename: 'Rozklad_Logoped.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+            alert('✅ Розклад експортовано в PDF!');
+        }
+
+        // Ініціалізація
+        loadFromLocalStorage();
+        renderChildren();
+        renderTimeSlots();
+        renderSchedule();
+        updateStats();
+    </script>
+</body>
+</html>
