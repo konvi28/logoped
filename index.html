@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Розклад логопеда v 1.0</title>
+    <title>Розклад логопеда v 1.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -27,9 +27,6 @@
             height: 100vh;
             margin: 0;
             background: white;
-            border-radius: 0;
-            box-shadow: none;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
@@ -84,7 +81,7 @@
 
         .tab-content {
             display: none;
-            padding: 0 20px 20px 20px;
+            padding: 20px;
             flex: 1;
             overflow-y: auto;
         }
@@ -174,19 +171,20 @@
         }
 
         .save-load-section {
-            margin-bottom: 0;
+            margin-bottom: 15px;
             padding: 10px;
             background: #f8f9fa;
-            border-radius: 0;
+            border-radius: 8px;
             display: flex;
             gap: 8px;
             align-items: center;
             flex-wrap: wrap;
-            flex-shrink: 0;
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .save-load-section h3 {
+            width: 100%;
+            margin: 5px 0;
+            font-size: 16px;
         }
 
         .children-list, .time-slots-list {
@@ -201,17 +199,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            cursor: move;
-            transition: all 0.3s;
-        }
-
-        .child-item:hover, .time-slot-item:hover {
-            background: #e9ecef;
-            transform: translateX(5px);
-        }
-
-        .child-item.dragging, .time-slot-item.dragging {
-            opacity: 0.5;
         }
 
         .child-info, .time-info {
@@ -230,10 +217,73 @@
             margin-top: 4px;
         }
 
+        /* Плитки для перетягування */
+        .available-tiles-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .available-tiles-section h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .tiles-group {
+            margin-bottom: 20px;
+        }
+
+        .tiles-group-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .tiles-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .lesson-tile {
+            padding: 12px 20px;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+            cursor: move;
+            transition: all 0.3s;
+            user-select: none;
+        }
+
+        .lesson-tile:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .lesson-tile.dragging {
+            opacity: 0.5;
+        }
+
+        .lesson-tile.time-tile {
+            background: #28a745;
+        }
+
+        .lesson-tile.time-tile:hover {
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+
+        /* Розклад */
+        .schedule-wrapper {
+            overflow: auto;
+            flex: 1;
+        }
+
         .schedule-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
             background: white;
         }
 
@@ -242,6 +292,7 @@
             border: 2px solid #dee2e6;
             padding: 12px;
             text-align: center;
+            min-width: 80px;
         }
 
         .schedule-table th {
@@ -254,49 +305,82 @@
         }
 
         .schedule-table td {
-            min-height: 80px;
             vertical-align: top;
-            position: relative;
+            min-height: 80px;
         }
 
-        .schedule-table td.drop-zone {
-            background: #f0f0f0;
-            min-width: 150px;
+        .schedule-table td.day-column {
+            background: #e9ecef;
+            font-weight: 600;
+            color: #495057;
+            vertical-align: middle;
         }
 
-        .schedule-table td.drop-zone.drag-over {
-            background: #d4edda;
-            border-color: #28a745;
+        .schedule-table td.lesson-number {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
         }
 
-        .lesson-block {
+        .schedule-table td.time-column {
+            background: #f8f9fa;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .schedule-table tbody td:not(.day-column):not(.lesson-number):not(.time-column) {
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .schedule-table tbody td:not(.day-column):not(.lesson-number):not(.time-column):hover {
+            background-color: #f8f9fa;
+        }
+
+        .schedule-table tbody td.drag-over {
+            background-color: #d4edda !important;
+            border-color: #28a745 !important;
+        }
+
+        /* Картка заняття */
+        .lesson-card {
             background: white;
             border: 2px solid #667eea;
             border-radius: 8px;
-            padding: 8px;
+            padding: 10px;
             margin: 4px 0;
             position: relative;
-            cursor: pointer;
+            cursor: move;
             transition: all 0.3s;
         }
 
-        .lesson-block:hover {
+        .lesson-card:hover {
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
             transform: translateY(-2px);
         }
 
-        .lesson-child {
+        .lesson-card.dragging {
+            opacity: 0.5;
+        }
+
+        .lesson-card-child {
             font-weight: 600;
             color: #333;
             margin-bottom: 4px;
         }
 
-        .lesson-time {
-            color: #667eea;
-            font-size: 12px;
+        .lesson-card-time {
+            color: #28a745;
+            font-size: 13px;
+            font-weight: 600;
         }
 
-        .remove-lesson {
+        .lesson-card-incomplete {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .delete-lesson-btn {
             position: absolute;
             top: 4px;
             right: 4px;
@@ -304,51 +388,30 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 12px;
+            width: 22px;
+            height: 22px;
+            font-size: 14px;
             cursor: pointer;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s;
+            font-weight: bold;
+            line-height: 1;
         }
 
-        .lesson-block:hover .remove-lesson {
-            opacity: 1;
-        }
-
-        .remove-lesson:hover {
-            background: #c82333;
-        }
-
-        .day-column {
-            background: #e9ecef;
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .lesson-number {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .time-input-group {
+        .lesson-card:hover .delete-lesson-btn {
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
         }
 
-        .time-input-group input {
-            flex: 1;
+        .delete-lesson-btn:hover {
+            background: #c82333;
         }
 
         h2 {
             color: #333;
             margin-top: 20px;
             margin-bottom: 15px;
+            font-size: 20px;
         }
 
         .stats {
@@ -361,6 +424,7 @@
         .stats h3 {
             color: #667eea;
             margin-bottom: 10px;
+            font-size: 18px;
         }
 
         .stat-item {
@@ -368,13 +432,26 @@
             color: #495057;
         }
 
-        .warning {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            padding: 12px;
-            border-radius: 8px;
-            margin-top: 10px;
-            color: #856404;
+        .time-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .time-input-group .form-group {
+            margin: 0;
+            flex: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -414,11 +491,11 @@
         <div class="tab-content">
             <h2>Додати часовий блок</h2>
             <div class="time-input-group">
-                <div class="form-group" style="margin: 0;">
+                <div class="form-group">
                     <label>Початок:</label>
                     <input type="time" id="timeStart" value="08:00">
                 </div>
-                <div class="form-group" style="margin: 0;">
+                <div class="form-group">
                     <label>Кінець:</label>
                     <input type="time" id="timeEnd" value="08:45">
                 </div>
@@ -434,37 +511,14 @@
         <!-- Вкладка: Розклад -->
         <div class="tab-content">
             <div class="save-load-section">
-                <h3 style="width: 100%; margin: 5px 0;">💾 Керування даними</h3>
+                <h3>💾 Керування даними</h3>
                 <button class="btn btn-success" onclick="saveData()">💾 Зберегти</button>
                 <button class="btn btn-info" onclick="exportToExcel()">📥 Excel</button>
                 <button class="btn btn-info" onclick="exportToPDF()">📄 PDF</button>
                 <button class="btn btn-danger" onclick="clearAll()">🗑️ Очистити все</button>
             </div>
 
-            <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #667eea;">
-                <strong>💡 Як користуватися:</strong>
-                <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
-                    <li>Перетягніть <strong>дитину</strong> з вкладки "Діти" в потрібну клітинку розкладу</li>
-                    <li>Перетягніть <strong>час</strong> з вкладки "Час занять" в ту саму клітинку</li>
-                    <li>Можна додавати окремо - спочатку дитину, потім час, або навпаки</li>
-                    <li>Можна додавати кілька занять в одну клітинку</li>
-                </ul>
-            </div>
-
-            <div id="scheduleContent">
-                <table class="schedule-table" id="scheduleTable">
-                    <thead>
-                        <tr>
-                            <th>День</th>
-                            <th>№</th>
-                            <th>Час</th>
-                            <th>Дитина</th>
-                        </tr>
-                    </thead>
-                    <tbody id="scheduleBody">
-                    </tbody>
-                </table>
-            </div>
+            <div id="scheduleContent"></div>
 
             <div class="stats" id="statsSection">
                 <h3>📊 Статистика</h3>
@@ -477,11 +531,16 @@
         // Дані
         let children = [];
         let timeSlots = [];
-        let schedule = {};
+        let schedule = {}; // Структура: { "день-урок": [{ childId, childName, timeId, time }] }
         const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця'];
+        const maxLessons = 12;
 
         // Змінні для drag and drop
-        let draggedItem = null; // Може бути дитина або час
+        let draggedElement = null;
+        let draggedType = null; // 'child' або 'time'
+        let draggedId = null;
+        let fromSchedule = false;
+        let originalSlot = null;
 
         // Перемикання вкладок
         function switchTab(index) {
@@ -495,6 +554,10 @@
             contents.forEach((content, i) => {
                 content.classList.toggle('active', i === index);
             });
+
+            if (index === 2) {
+                renderSchedule();
+            }
         }
 
         // Додавання дитини
@@ -530,10 +593,12 @@
                 // Видаляємо заняття з розкладу
                 Object.keys(schedule).forEach(key => {
                     schedule[key] = schedule[key].filter(lesson => lesson.childId !== id);
+                    if (schedule[key].length === 0) {
+                        delete schedule[key];
+                    }
                 });
                 
                 renderChildren();
-                renderSchedule();
                 updateStats();
                 saveToLocalStorage();
             }
@@ -549,14 +614,12 @@
             }
 
             container.innerHTML = children.map(child => `
-                <div class="child-item" draggable="true" 
-                     ondragstart="dragChildStart(event, ${child.id})"
-                     ondragend="dragEnd(event)">
+                <div class="child-item">
                     <div class="child-info">
                         <div class="child-name">${child.name}</div>
                         <div class="child-hours">Годин на тиждень: ${child.hours}</div>
                     </div>
-                    <button class="btn btn-danger" onclick="removeChild(${child.id})">🗑️</button>
+                    <button class="btn btn-danger" onclick="removeChild(${child.id})">🗑️ Видалити</button>
                 </div>
             `).join('');
         }
@@ -587,22 +650,25 @@
             timeSlots.sort((a, b) => a.start.localeCompare(b.start));
             
             renderTimeSlots();
-            renderSchedule();
             saveToLocalStorage();
         }
 
         // Видалення часового блоку
         function removeTimeSlot(id) {
-            if (confirm('Видалити цей часовий блок? Всі заняття в цей час будуть видалені з розкладу.')) {
+            if (confirm('Видалити цей часовий блок? Всі заняття з цим часом будуть оновлені.')) {
                 timeSlots = timeSlots.filter(t => t.id !== id);
                 
-                // Видаляємо заняття з розкладу
+                // Оновлюємо заняття в розкладі - видаляємо час
                 Object.keys(schedule).forEach(key => {
-                    schedule[key] = schedule[key].filter(lesson => lesson.timeId !== id);
+                    schedule[key] = schedule[key].map(lesson => {
+                        if (lesson.timeId === id) {
+                            return { ...lesson, timeId: null, time: null };
+                        }
+                        return lesson;
+                    });
                 });
                 
                 renderTimeSlots();
-                renderSchedule();
                 updateStats();
                 saveToLocalStorage();
             }
@@ -618,112 +684,297 @@
             }
 
             container.innerHTML = timeSlots.map(slot => `
-                <div class="time-slot-item" draggable="true"
-                     ondragstart="dragTimeStart(event, ${slot.id})"
-                     ondragend="dragEnd(event)">
+                <div class="time-slot-item">
                     <div class="time-info">
                         <div class="time-value">${slot.display}</div>
                     </div>
-                    <button class="btn btn-danger" onclick="removeTimeSlot(${slot.id})">🗑️</button>
+                    <button class="btn btn-danger" onclick="removeTimeSlot(${slot.id})">🗑️ Видалити</button>
                 </div>
             `).join('');
         }
 
-        // Drag and Drop
-        function dragChildStart(event, childId) {
-            const child = children.find(c => c.id === childId);
-            draggedItem = {
-                type: 'child',
-                id: childId,
-                name: child.name
-            };
-            event.target.classList.add('dragging');
-        }
+        // Відображення розкладу
+        function renderSchedule() {
+            const content = document.getElementById('scheduleContent');
 
-        function dragTimeStart(event, timeId) {
-            const time = timeSlots.find(t => t.id === timeId);
-            draggedItem = {
-                type: 'time',
-                id: timeId,
-                display: time.display
-            };
-            event.target.classList.add('dragging');
-        }
-
-        function dragEnd(event) {
-            event.target.classList.remove('dragging');
-            draggedItem = null;
-        }
-
-        function allowDrop(event) {
-            event.preventDefault();
-            event.currentTarget.classList.add('drag-over');
-        }
-
-        function dragLeave(event) {
-            event.currentTarget.classList.remove('drag-over');
-        }
-
-        function drop(event, day, lessonNumber) {
-            event.preventDefault();
-            event.currentTarget.classList.remove('drag-over');
-
-            if (!draggedItem) {
+            if (children.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👶</div>
+                        <h3>Спочатку додайте дітей</h3>
+                        <p>Перейдіть на вкладку "Діти" та додайте дітей</p>
+                    </div>
+                `;
                 return;
             }
 
-            const key = `${day}-${lessonNumber}`;
+            // Генеруємо плитки для перетягування
+            let tilesHtml = '<div class="available-tiles-section">';
+            tilesHtml += '<h2>Перетягніть дитину та час в розклад</h2>';
+
+            // Діти
+            let hasAvailableChildren = false;
+            children.forEach(child => {
+                let usedCount = 0;
+                Object.values(schedule).forEach(lessons => {
+                    usedCount += lessons.filter(l => l.childId === child.id).length;
+                });
+                
+                if (usedCount < child.hours) {
+                    hasAvailableChildren = true;
+                }
+            });
+
+            if (hasAvailableChildren) {
+                tilesHtml += '<div class="tiles-group"><div class="tiles-group-title">👶 Діти:</div><div class="tiles-container">';
+                
+                children.forEach(child => {
+                    let usedCount = 0;
+                    Object.values(schedule).forEach(lessons => {
+                        usedCount += lessons.filter(l => l.childId === child.id).length;
+                    });
+                    
+                    const availableCount = child.hours - usedCount;
+                    
+                    if (availableCount > 0) {
+                        for (let i = 0; i < availableCount; i++) {
+                            tilesHtml += `
+                                <div class="lesson-tile" 
+                                     draggable="true"
+                                     data-type="child"
+                                     data-id="${child.id}"
+                                     data-name="${child.name}">
+                                    ${child.name}
+                                </div>
+                            `;
+                        }
+                    }
+                });
+                
+                tilesHtml += '</div></div>';
+            }
+
+            // Час
+            if (timeSlots.length > 0) {
+                tilesHtml += '<div class="tiles-group"><div class="tiles-group-title">⏰ Час:</div><div class="tiles-container">';
+                
+                timeSlots.forEach(slot => {
+                    tilesHtml += `
+                        <div class="lesson-tile time-tile" 
+                             draggable="true"
+                             data-type="time"
+                             data-id="${slot.id}"
+                             data-display="${slot.display}">
+                            ${slot.display}
+                        </div>
+                    `;
+                });
+                
+                tilesHtml += '</div></div>';
+            }
+
+            tilesHtml += '</div>';
+
+            // Генеруємо таблицю розкладу
+            let scheduleHtml = '<div class="schedule-wrapper"><table class="schedule-table"><thead><tr>';
+            scheduleHtml += '<th>День</th><th>№</th><th>Час</th><th>Заняття</th>';
+            scheduleHtml += '</tr></thead><tbody>';
+
+            days.forEach((day, dayIndex) => {
+                for (let i = 0; i < maxLessons; i++) {
+                    scheduleHtml += '<tr>';
+                    
+                    if (i === 0) {
+                        scheduleHtml += `<td rowspan="${maxLessons}" class="day-column">${day}</td>`;
+                    }
+                    
+                    scheduleHtml += `<td class="lesson-number">${i + 1}</td>`;
+                    
+                    // Час - показуємо час з перших занять у цьому слоті
+                    const key = `${dayIndex}-${i}`;
+                    const lessons = schedule[key] || [];
+                    let timeDisplay = '-';
+                    if (lessons.length > 0 && lessons[0].time) {
+                        timeDisplay = lessons[0].time;
+                    }
+                    scheduleHtml += `<td class="time-column">${timeDisplay}</td>`;
+                    
+                    scheduleHtml += `<td data-day="${dayIndex}" data-lesson="${i}">`;
+                    
+                    if (lessons.length > 0) {
+                        lessons.forEach(lesson => {
+                            const hasChild = lesson.childName;
+                            const hasTime = lesson.time;
+                            const isComplete = hasChild && hasTime;
+                            
+                            scheduleHtml += `
+                                <div class="lesson-card ${!isComplete ? 'lesson-card-incomplete' : ''}" 
+                                     draggable="true"
+                                     data-from-schedule="true"
+                                     data-day="${dayIndex}"
+                                     data-lesson="${i}"
+                                     data-lesson-id="${lesson.id}">
+                                    <button class="delete-lesson-btn" onclick="deleteLesson(${dayIndex}, ${i}, ${lesson.id}); event.stopPropagation();">×</button>
+                                    <div class="lesson-card-child">${hasChild ? lesson.childName : '❓ Хто?'}</div>
+                                    <div class="lesson-card-time">${hasTime ? lesson.time : '⏰ Коли?'}</div>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    scheduleHtml += '</td></tr>';
+                }
+            });
+
+            scheduleHtml += '</tbody></table></div>';
+
+            content.innerHTML = tilesHtml + scheduleHtml;
             
+            // Додаємо обробники drag and drop
+            attachDragHandlers();
+            updateStats();
+        }
+
+        // Додаємо обробники drag and drop
+        function attachDragHandlers() {
+            // Плитки
+            const tiles = document.querySelectorAll('.lesson-tile[draggable="true"]');
+            tiles.forEach(tile => {
+                tile.addEventListener('dragstart', handleTileDragStart);
+                tile.addEventListener('dragend', handleDragEnd);
+            });
+
+            // Картки в розкладі
+            const cards = document.querySelectorAll('.lesson-card[draggable="true"]');
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleCardDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+            });
+
+            // Клітинки таблиці
+            const cells = document.querySelectorAll('.schedule-table tbody td:not(.day-column):not(.lesson-number):not(.time-column)');
+            cells.forEach(cell => {
+                cell.addEventListener('dragover', handleCellDragOver);
+                cell.addEventListener('dragleave', handleCellDragLeave);
+                cell.addEventListener('drop', handleCellDrop);
+            });
+        }
+
+        // Початок перетягування плитки
+        function handleTileDragStart(e) {
+            draggedElement = e.target;
+            draggedType = e.target.dataset.type;
+            draggedId = parseInt(e.target.dataset.id);
+            fromSchedule = false;
+            
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        // Початок перетягування картки з розкладу
+        function handleCardDragStart(e) {
+            draggedElement = e.target;
+            fromSchedule = true;
+            
+            originalSlot = {
+                day: parseInt(e.target.dataset.day),
+                lesson: parseInt(e.target.dataset.lesson),
+                lessonId: parseInt(e.target.dataset.lessonId)
+            };
+            
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        // Кінець перетягування
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        // Над клітинкою
+        function handleCellDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        // Покинув клітинку
+        function handleCellDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        // Відпустив в клітинку
+        function handleCellDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            const day = parseInt(e.currentTarget.dataset.day);
+            const lesson = parseInt(e.currentTarget.dataset.lesson);
+            const key = `${day}-${lesson}`;
+
             if (!schedule[key]) {
                 schedule[key] = [];
             }
 
-            // Додаємо дитину або час
-            if (draggedItem.type === 'child') {
-                // Додаємо дитину до розкладу
+            // Якщо переміщуємо з розкладу
+            if (fromSchedule && originalSlot) {
+                const oldKey = `${originalSlot.day}-${originalSlot.lesson}`;
+                const oldLesson = schedule[oldKey].find(l => l.id === originalSlot.lessonId);
+                
+                if (oldLesson) {
+                    // Видаляємо зі старого місця
+                    schedule[oldKey] = schedule[oldKey].filter(l => l.id !== originalSlot.lessonId);
+                    if (schedule[oldKey].length === 0) {
+                        delete schedule[oldKey];
+                    }
+                    
+                    // Додаємо на нове місце
+                    schedule[key].push(oldLesson);
+                }
+            } else if (draggedType === 'child') {
+                // Додаємо нову дитину
+                const child = children.find(c => c.id === draggedId);
                 const lesson = {
                     id: Date.now(),
-                    childId: draggedItem.id,
-                    childName: draggedItem.name,
+                    childId: child.id,
+                    childName: child.name,
                     timeId: null,
-                    time: null,
-                    day: day,
-                    lessonNumber: lessonNumber
+                    time: null
                 };
                 schedule[key].push(lesson);
-            } else if (draggedItem.type === 'time') {
-                // Шукаємо заняття без часу або створюємо нове
-                const lessonWithoutTime = schedule[key].find(l => !l.timeId);
+            } else if (draggedType === 'time') {
+                // Додаємо час до першого неповного заняття або створюємо нове
+                const time = timeSlots.find(t => t.id === draggedId);
+                const incompleteLesson = schedule[key].find(l => !l.timeId);
                 
-                if (lessonWithoutTime) {
-                    // Додаємо час до існуючого заняття
-                    lessonWithoutTime.timeId = draggedItem.id;
-                    lessonWithoutTime.time = draggedItem.display;
+                if (incompleteLesson) {
+                    incompleteLesson.timeId = time.id;
+                    incompleteLesson.time = time.display;
                 } else {
-                    // Створюємо нове заняття тільки з часом
                     const lesson = {
                         id: Date.now(),
                         childId: null,
                         childName: null,
-                        timeId: draggedItem.id,
-                        time: draggedItem.display,
-                        day: day,
-                        lessonNumber: lessonNumber
+                        timeId: time.id,
+                        time: time.display
                     };
                     schedule[key].push(lesson);
                 }
             }
 
-            draggedItem = null;
+            draggedElement = null;
+            draggedType = null;
+            draggedId = null;
+            fromSchedule = false;
+            originalSlot = null;
 
             renderSchedule();
-            updateStats();
             saveToLocalStorage();
         }
 
-        // Видалення заняття з розкладу
-        function removeLesson(day, lessonNumber, lessonId) {
-            const key = `${day}-${lessonNumber}`;
+        // Видалення заняття
+        function deleteLesson(day, lesson, lessonId) {
+            const key = `${day}-${lesson}`;
             schedule[key] = schedule[key].filter(l => l.id !== lessonId);
             
             if (schedule[key].length === 0) {
@@ -731,57 +982,13 @@
             }
 
             renderSchedule();
-            updateStats();
             saveToLocalStorage();
-        }
-
-        // Відображення розкладу
-        function renderSchedule() {
-            const tbody = document.getElementById('scheduleBody');
-            
-            // Завжди показуємо 12 уроків
-            const maxLessons = 12;
-
-            let html = '';
-            
-            days.forEach(day => {
-                for (let i = 0; i < maxLessons; i++) {
-                    const key = `${day}-${i + 1}`;
-                    const lessons = schedule[key] || [];
-                    
-                    // Знаходимо відповідний часовий слот, якщо є
-                    const slot = timeSlots[i];
-
-                    html += `
-                        <tr>
-                            ${i === 0 ? `<td rowspan="${maxLessons}" class="day-column">${day}</td>` : ''}
-                            <td class="lesson-number">${i + 1}</td>
-                            <td>${slot ? slot.display : '-'}</td>
-                            <td class="drop-zone" 
-                                ondrop="drop(event, '${day}', ${i + 1})"
-                                ondragover="allowDrop(event)"
-                                ondragleave="dragLeave(event)">
-                                ${lessons.map(lesson => `
-                                    <div class="lesson-block">
-                                        <button class="remove-lesson" onclick="removeLesson('${day}', ${i + 1}, ${lesson.id})">×</button>
-                                        ${lesson.childName ? `<div class="lesson-child">${lesson.childName}</div>` : '<div class="lesson-child" style="color: #999;">Дитина не вказана</div>'}
-                                        ${lesson.time ? `<div class="lesson-time">${lesson.time}</div>` : '<div class="lesson-time" style="color: #999;">Час не вказано</div>'}
-                                    </div>
-                                `).join('')}
-                            </td>
-                        </tr>
-                    `;
-                }
-            });
-
-            tbody.innerHTML = html;
         }
 
         // Оновлення статистики
         function updateStats() {
             const statsContent = document.getElementById('statsContent');
             
-            // Підрахунок занять для кожної дитини
             const childStats = {};
             children.forEach(child => {
                 childStats[child.id] = {
@@ -793,7 +1000,7 @@
 
             Object.values(schedule).forEach(lessons => {
                 lessons.forEach(lesson => {
-                    if (childStats[lesson.childId]) {
+                    if (lesson.childId && childStats[lesson.childId]) {
                         childStats[lesson.childId].actual++;
                     }
                 });
@@ -860,7 +1067,6 @@
                 renderChildren();
                 renderTimeSlots();
                 renderSchedule();
-                updateStats();
                 
                 alert('✅ Всі дані видалено!');
             }
@@ -877,26 +1083,23 @@
             const data = [];
 
             // Заголовок
-            const header = ['День', '№', 'Час', 'Дитина'];
-            data.push(header);
+            data.push(['День', '№', 'Дитина', 'Час']);
 
-            // Заповнення даних - 12 уроків
-            const maxLessons = 12;
-            days.forEach(day => {
+            // Дані
+            days.forEach((day, dayIndex) => {
                 for (let i = 0; i < maxLessons; i++) {
-                    const key = `${day}-${i + 1}`;
+                    const key = `${dayIndex}-${i}`;
                     const lessons = schedule[key] || [];
-                    const slot = timeSlots[i];
                     
                     if (lessons.length === 0) {
-                        data.push([day, i + 1, slot ? slot.display : '-', '']);
+                        data.push([day, i + 1, '', '']);
                     } else {
-                        lessons.forEach((lesson, j) => {
+                        lessons.forEach((lesson, idx) => {
                             data.push([
-                                j === 0 ? day : '',
-                                j === 0 ? i + 1 : '',
-                                j === 0 ? (slot ? slot.display : '-') : '',
-                                lesson.childName
+                                idx === 0 ? day : '',
+                                idx === 0 ? i + 1 : '',
+                                lesson.childName || '',
+                                lesson.time || ''
                             ]);
                         });
                     }
@@ -904,11 +1107,10 @@
             });
 
             const ws = XLSX.utils.aoa_to_sheet(data);
-            ws['!cols'] = [{ wch: 12 }, { wch: 5 }, { wch: 15 }, { wch: 30 }];
-
+            ws['!cols'] = [{ wch: 12 }, { wch: 5 }, { wch: 30 }, { wch: 15 }];
             XLSX.utils.book_append_sheet(wb, ws, 'Розклад');
 
-            // Додаємо аркуш зі статистикою
+            // Статистика
             const statsData = [['Дитина', 'Заплановано годин', 'Фактично годин', 'Різниця']];
             children.forEach(child => {
                 const actual = Object.values(schedule).flat().filter(l => l.childId === child.id).length;
@@ -930,13 +1132,13 @@
                 return;
             }
 
-            const element = document.getElementById('scheduleContent');
+            const element = document.querySelector('.schedule-wrapper');
             const opt = {
                 margin: 10,
                 filename: 'Rozklad_Logoped.pdf',
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
             };
 
             html2pdf().set(opt).from(element).save();
@@ -947,8 +1149,6 @@
         loadFromLocalStorage();
         renderChildren();
         renderTimeSlots();
-        renderSchedule();
-        updateStats();
     </script>
 </body>
 </html>
