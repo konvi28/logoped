@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Розклад логопеда v 1.5</title>
+    <title>Розклад логопеда v 1.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -210,6 +210,8 @@
 
         .time-slot-item:hover {
             background: #e9ecef;
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .child-info, .time-info {
@@ -296,6 +298,7 @@
             width: 100%;
             border-collapse: collapse;
             background: white;
+            border: 4px solid #495057;
         }
 
         .schedule-table th,
@@ -488,6 +491,27 @@
             font-size: 48px;
             margin-bottom: 15px;
         }
+
+        /* Футер */
+        .footer {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            border-top: 2px solid #e9ecef;
+            flex-shrink: 0;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -569,6 +593,11 @@
                 <h3>📊 Статистика</h3>
                 <div id="statsContent"></div>
             </div>
+        </div>
+
+        <!-- Футер -->
+        <div class="footer">
+            Розробник <strong>Obariv</strong> by <strong>Krasovskiy</strong>
         </div>
     </div>
 
@@ -761,7 +790,7 @@
             }
 
             container.innerHTML = timeSlots.map(slot => `
-                <div class="time-slot-item">
+                <div class="time-slot-item" style="border-left: 4px solid #28a745;">
                     <div class="time-info">
                         <div class="time-value">${slot.display}</div>
                     </div>
