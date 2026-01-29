@@ -6,7 +6,7 @@
     <link rel="icon" type="image/webp" href="logo.webp">
     <link rel="shortcut icon" type="image/webp" href="logo.webp">
     <link rel="apple-touch-icon" href="logo.webp">
-    <title>Розклад логопеда v 1.7</title>
+    <title>Розклад логопеда v 1.8</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -725,13 +725,29 @@
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <input type="color" value="${child.color || '#667eea'}" 
-                               onchange="changeChildColor(${child.id}, this.value)" 
+                               data-child-id="${child.id}"
+                               class="child-color-picker"
                                title="Змінити колір" 
                                style="width: 40px; height: 40px; border: 2px solid #ddd; border-radius: 4px; cursor: pointer;">
-                        <button class="btn btn-danger" onclick="removeChild(${child.id})">🗑️ Видалити</button>
+                        <button class="btn btn-danger remove-child-btn" data-child-id="${child.id}">🗑️ Видалити</button>
                     </div>
                 </div>
             `).join('');
+
+            // Додаємо обробники подій
+            container.querySelectorAll('.remove-child-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.dataset.childId);
+                    removeChild(id);
+                });
+            });
+
+            container.querySelectorAll('.child-color-picker').forEach(picker => {
+                picker.addEventListener('change', function() {
+                    const id = parseInt(this.dataset.childId);
+                    changeChildColor(id, this.value);
+                });
+            });
         }
 
         // Додавання часового блоку
