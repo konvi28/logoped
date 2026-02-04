@@ -6,7 +6,7 @@
     <link rel="icon" type="image/webp" href="logo.webp">
     <link rel="shortcut icon" type="image/webp" href="logo.webp">
     <link rel="apple-touch-icon" href="logo.webp">
-    <title>Розклад</title>
+    <title>Розклад логопеда v 1.7</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -520,7 +520,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📚 Розклад</h1>
+            <h1>📚 Розклад логопеда</h1>
             <p>Система планування занять з дітьми</p>
         </div>
 
@@ -582,6 +582,12 @@
         <div class="tab-content">
             <div class="save-load-section">
                 <h3>💾 Керування даними</h3>
+                <div style="width: 100%; display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; background: white; padding: 8px 15px; border-radius: 8px; border: 2px solid #667eea;">
+                        <input type="checkbox" id="selectModeToggle" onchange="toggleSelectMode()" style="width: 20px; height: 20px; cursor: pointer;">
+                        <span style="font-weight: 600; color: #667eea;">📋 Режим випадаючих списків</span>
+                    </label>
+                </div>
                 <button class="btn btn-success" onclick="saveData()">💾 Зберегти</button>
                 <button class="btn btn-info" onclick="exportToExcel()">📥 Експорт Excel</button>
                 <button class="btn btn-info" onclick="document.getElementById('importExcel').click()">📤 Імпорт Excel</button>
@@ -611,6 +617,7 @@
         let schedule = {}; // Структура: { "день-урок": [{ childId, childName, timeId, time }] }
         const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця'];
         const maxLessons = 12;
+        let selectMode = false; // Режим випадаючих списків
 
         // Змінні для drag and drop
         let draggedElement = null;
@@ -635,6 +642,12 @@
             if (index === 2) {
                 renderSchedule();
             }
+        }
+
+        // Перемикання режиму випадаючих списків
+        function toggleSelectMode() {
+            selectMode = document.getElementById('selectModeToggle').checked;
+            renderSchedule();
         }
 
         // Додавання дитини
@@ -725,29 +738,13 @@
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <input type="color" value="${child.color || '#667eea'}" 
-                               data-child-id="${child.id}"
-                               class="child-color-picker"
+                               onchange="changeChildColor(${child.id}, this.value)" 
                                title="Змінити колір" 
                                style="width: 40px; height: 40px; border: 2px solid #ddd; border-radius: 4px; cursor: pointer;">
-                        <button class="btn btn-danger remove-child-btn" data-child-id="${child.id}">🗑️ Видалити</button>
+                        <button class="btn btn-danger" onclick="removeChild(${child.id})">🗑️ Видалити</button>
                     </div>
                 </div>
             `).join('');
-
-            // Додаємо обробники подій
-            container.querySelectorAll('.remove-child-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.dataset.childId);
-                    removeChild(id);
-                });
-            });
-
-            container.querySelectorAll('.child-color-picker').forEach(picker => {
-                picker.addEventListener('change', function() {
-                    const id = parseInt(this.dataset.childId);
-                    changeChildColor(id, this.value);
-                });
-            });
         }
 
         // Додавання часового блоку
@@ -922,54 +919,106 @@
                     
                     scheduleHtml += `<td class="lesson-number">${i + 1}</td>`;
                     
-                    // Колонка для часу - drop-zone
+                    // Колонка для часу
                     const timeKey = `time-${dayIndex}-${i}`;
                     const timeSlot = schedule[timeKey] || null;
                     
-                    scheduleHtml += `<td class="time-column" data-day="${dayIndex}" data-lesson="${i}" data-type="time">`;
-                    if (timeSlot) {
-                        scheduleHtml += `
-                            <div class="lesson-card time-card" 
-                                 draggable="true"
-                                 data-from-schedule="true"
-                                 data-type="time-slot"
-                                 data-day="${dayIndex}"
-                                 data-lesson="${i}">
-                                <button class="delete-lesson-btn" onclick="deleteTime(${dayIndex}, ${i}); event.stopPropagation();">×</button>
-                                <div style="font-weight: 600; color: #28a745;">${timeSlot.display}</div>
-                            </div>
-                        `;
+                    if (selectMode) {
+                        // РЕЖИМ ВИПАДАЮЧИХ СПИСКІВ - ЧАС
+                        scheduleHtml += `<td class="time-column">`;
+                        scheduleHtml += `<select class="time-select" data-day="${dayIndex}" data-lesson="${i}" 
+                                         style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 4px; font-size: 14px; cursor: pointer;">
+                            <option value="">-- Оберіть час --</option>`;
+                        
+                        timeSlots.forEach(slot => {
+                            const selected = timeSlot && timeSlot.timeId === slot.id ? 'selected' : '';
+                            scheduleHtml += `<option value="${slot.id}" ${selected}>${slot.display}</option>`;
+                        });
+                        
+                        scheduleHtml += `</select></td>`;
+                    } else {
+                        // РЕЖИМ DRAG AND DROP - ЧАС
+                        scheduleHtml += `<td class="time-column" data-day="${dayIndex}" data-lesson="${i}" data-type="time">`;
+                        if (timeSlot) {
+                            scheduleHtml += `
+                                <div class="lesson-card time-card" 
+                                     draggable="true"
+                                     data-from-schedule="true"
+                                     data-type="time-slot"
+                                     data-day="${dayIndex}"
+                                     data-lesson="${i}">
+                                    <button class="delete-lesson-btn" onclick="deleteTime(${dayIndex}, ${i}); event.stopPropagation();">×</button>
+                                    <div style="font-weight: 600; color: #28a745;">${timeSlot.display}</div>
+                                </div>
+                            `;
+                        }
+                        scheduleHtml += `</td>`;
                     }
-                    scheduleHtml += `</td>`;
                     
-                    // Колонка для дітей - drop-zone
+                    // Колонка для дітей
                     const childKey = `child-${dayIndex}-${i}`;
                     const childrenInSlot = schedule[childKey] || [];
                     
-                    scheduleHtml += `<td data-day="${dayIndex}" data-lesson="${i}" data-type="child">`;
-                    
-                    if (childrenInSlot.length > 0) {
-                        childrenInSlot.forEach(child => {
-                            const childData = children.find(c => c.id === child.childId);
-                            const childColor = childData ? (childData.color || '#667eea') : '#667eea';
-                            
-                            scheduleHtml += `
-                                <div class="lesson-card" 
-                                     draggable="true"
-                                     data-from-schedule="true"
-                                     data-type="child-slot"
-                                     data-day="${dayIndex}"
-                                     data-lesson="${i}"
-                                     data-child-id="${child.id}"
-                                     style="border-color: ${childColor}; background: ${childColor}15;">
-                                    <button class="delete-lesson-btn" onclick="deleteChild(${dayIndex}, ${i}, ${child.id}); event.stopPropagation();">×</button>
-                                    <div class="lesson-card-child">${child.childName}</div>
-                                </div>
-                            `;
+                    if (selectMode) {
+                        // РЕЖИМ ВИПАДАЮЧИХ СПИСКІВ - ДІТИ
+                        scheduleHtml += `<td>`;
+                        scheduleHtml += `<select class="child-select" data-day="${dayIndex}" data-lesson="${i}" 
+                                         style="width: 100%; padding: 8px; border: 2px solid #e9ecef; border-radius: 4px; font-size: 14px; cursor: pointer;">
+                            <option value="">-- Оберіть дитину --</option>`;
+                        
+                        children.forEach(child => {
+                            scheduleHtml += `<option value="${child.id}">${child.name}</option>`;
                         });
+                        
+                        scheduleHtml += `</select>`;
+                        
+                        // Показуємо вибрані діти
+                        if (childrenInSlot.length > 0) {
+                            scheduleHtml += `<div style="margin-top: 8px;">`;
+                            childrenInSlot.forEach(child => {
+                                const childData = children.find(c => c.id === child.childId);
+                                const childColor = childData ? (childData.color || '#667eea') : '#667eea';
+                                scheduleHtml += `
+                                    <div style="background: ${childColor}15; border: 1px solid ${childColor}; border-radius: 4px; padding: 6px; margin: 4px 0; display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-size: 13px; color: #333;">${child.childName}</span>
+                                        <button onclick="deleteChild(${dayIndex}, ${i}, ${child.id})" 
+                                                style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">×</button>
+                                    </div>
+                                `;
+                            });
+                            scheduleHtml += `</div>`;
+                        }
+                        
+                        scheduleHtml += `</td>`;
+                    } else {
+                        // РЕЖИМ DRAG AND DROP - ДІТИ
+                        scheduleHtml += `<td data-day="${dayIndex}" data-lesson="${i}" data-type="child">`;
+                        
+                        if (childrenInSlot.length > 0) {
+                            childrenInSlot.forEach(child => {
+                                const childData = children.find(c => c.id === child.childId);
+                                const childColor = childData ? (childData.color || '#667eea') : '#667eea';
+                                
+                                scheduleHtml += `
+                                    <div class="lesson-card" 
+                                         draggable="true"
+                                         data-from-schedule="true"
+                                         data-type="child-slot"
+                                         data-day="${dayIndex}"
+                                         data-lesson="${i}"
+                                         data-child-id="${child.id}"
+                                         style="border-color: ${childColor}; background: ${childColor}15;">
+                                        <button class="delete-lesson-btn" onclick="deleteChild(${dayIndex}, ${i}, ${child.id}); event.stopPropagation();">×</button>
+                                        <div class="lesson-card-child">${child.childName}</div>
+                                    </div>
+                                `;
+                            });
+                        }
+                        
+                        scheduleHtml += '</td>';
                     }
                     
-                    scheduleHtml += '</td></tr>';
+                    scheduleHtml += '</tr>';
                 }
             });
 
@@ -977,8 +1026,14 @@
 
             content.innerHTML = tilesHtml + scheduleHtml;
             
-            // Додаємо обробники drag and drop
-            attachDragHandlers();
+            if (selectMode) {
+                // Додаємо обробники для випадаючих списків
+                attachSelectHandlers();
+            } else {
+                // Додаємо обробники drag and drop
+                attachDragHandlers();
+            }
+            
             updateStats();
         }
 
@@ -1004,6 +1059,73 @@
                 cell.addEventListener('dragover', handleCellDragOver);
                 cell.addEventListener('dragleave', handleCellDragLeave);
                 cell.addEventListener('drop', handleCellDrop);
+            });
+        }
+
+        // Додаємо обробники для випадаючих списків
+        function attachSelectHandlers() {
+            // Обробники для вибору часу
+            const timeSelects = document.querySelectorAll('.time-select');
+            timeSelects.forEach(select => {
+                select.addEventListener('change', function() {
+                    const day = parseInt(this.dataset.day);
+                    const lesson = parseInt(this.dataset.lesson);
+                    const timeId = parseInt(this.value);
+                    
+                    const timeKey = `time-${day}-${lesson}`;
+                    
+                    if (timeId) {
+                        const time = timeSlots.find(t => t.id === timeId);
+                        if (time) {
+                            schedule[timeKey] = {
+                                timeId: time.id,
+                                display: time.display
+                            };
+                        }
+                    } else {
+                        delete schedule[timeKey];
+                    }
+                    
+                    saveToLocalStorage();
+                    renderSchedule();
+                });
+            });
+
+            // Обробники для вибору дитини
+            const childSelects = document.querySelectorAll('.child-select');
+            childSelects.forEach(select => {
+                select.addEventListener('change', function() {
+                    const day = parseInt(this.dataset.day);
+                    const lesson = parseInt(this.dataset.lesson);
+                    const childId = parseInt(this.value);
+                    
+                    if (!childId) return;
+                    
+                    const childKey = `child-${day}-${lesson}`;
+                    const child = children.find(c => c.id === childId);
+                    
+                    if (!child) return;
+                    
+                    if (!schedule[childKey]) {
+                        schedule[childKey] = [];
+                    }
+                    
+                    // Перевіряємо чи дитина вже не додана
+                    const exists = schedule[childKey].some(c => c.childId === childId);
+                    if (!exists) {
+                        schedule[childKey].push({
+                            id: Date.now(),
+                            childId: child.id,
+                            childName: child.name
+                        });
+                    }
+                    
+                    // Скидаємо вибір
+                    this.value = '';
+                    
+                    saveToLocalStorage();
+                    renderSchedule();
+                });
             });
         }
 
